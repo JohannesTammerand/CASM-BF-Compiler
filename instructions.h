@@ -7,6 +7,8 @@
 struct BF_instruction_st {
     void (*run)(struct BF_instruction_st *instruction, int *index);
 
+    void (*printAsm)(struct BF_instruction_st *instruction, int *index);
+
     union {
         int increment;
         int numberOfPositions;
@@ -47,5 +49,19 @@ void BF_endLoop_run(struct BF_instruction_st *instruction, int *index);
 void BF_print_run(struct BF_instruction_st *instruction, int *index);
 
 void BF_printDebug_run(struct BF_instruction_st *instruction, int *index);
+
+void BF_increment_printAsm(struct BF_instruction_st *instruction, int *index);
+
+void BF_move_printAsm(struct BF_instruction_st *instruction, int *index);
+
+void BF_write_printAsm(struct BF_instruction_st *instruction, int *index);
+
+void BF_beginLoop_printAsm(struct BF_instruction_st *instruction, int *index);
+
+void BF_endLoop_printAsm(struct BF_instruction_st *instruction, int *index);
+
+void BF_print_printAsm(struct BF_instruction_st *instruction, int *index);
+
+void BF_printDebug_printAsm(struct BF_instruction_st *instruction, int *index);
 
 #endif

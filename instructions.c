@@ -26,6 +26,7 @@ struct BF_instruction_st *BF_increment_new (int increment) {
 
     new->increment = increment;
     new->run = BF_increment_run;
+    new->printAsm = BF_increment_printAsm;
 
     cleanup:
         return new;
@@ -49,6 +50,7 @@ struct BF_instruction_st *BF_move_new (int numberOfPositions) {
 
     new->numberOfPositions = numberOfPositions;
     new->run = BF_move_run;
+    new->printAsm = BF_move_printAsm;
 
     cleanup:
         return new;
@@ -80,6 +82,7 @@ struct BF_instruction_st *BF_write_new (int writeValue) {
 
     new->writeValue = writeValue;
     new->run = BF_write_run;
+    new->printAsm = BF_write_printAsm;
 
     cleanup:
         return new;
@@ -97,6 +100,7 @@ struct BF_instruction_st *BF_beginLoop_new() {
 
     new->loopForwardIndex = -1;
     new->run = BF_beginLoop_run;
+    new->printAsm = BF_beginLoop_printAsm;
 
     cleanup:
         return new;
@@ -113,6 +117,7 @@ struct BF_instruction_st *BF_endLoop_new(int loopBackIndex) {
 
     new->loopBackIndex = loopBackIndex;
     new->run = BF_endLoop_run;
+    new->printAsm = BF_endLoop_printAsm;
 
     cleanup:
         return new;
@@ -128,6 +133,7 @@ struct BF_instruction_st *BF_print_new() {
     }
 
     new->run = BF_print_run;
+    new->printAsm = BF_print_printAsm;
 
     cleanup:
         return new;
@@ -219,6 +225,69 @@ void BF_print_run(struct BF_instruction_st *instruction, int *index) {
 
 void BF_printDebug_run(struct BF_instruction_st *instruction, int *index) {
     mem_printDebug();
+
+    ++*index;
+}
+
+void BF_increment_printAsm(struct BF_instruction_st *instruction, int *index) {
+    printf("\n    ;;;; Instruktsioon add\n");
+    printf("    add byte [esi], %d\n", instruction->increment);
+
+    ++*index;
+}
+
+void BF_move_printAsm(struct BF_instruction_st *instruction, int *index) {
+    int moveAmount = instruction->numberOfPositions;
+    int index2 = *index;
+    if (moveAmount > 0) {
+        while (index2 + moveAmount >= 30000) {
+            moveAmount -= 30000;
+        }
+    } else {
+        while (index2 + moveAmount < 0) {
+            moveAmount = moveAmount + 30000;
+        }
+    }
+
+    index2 = index2 + moveAmount;
+
+    printf("\n    ;;;; Instruktsioon move\n");
+    printf("    add esi, %d\n", moveAmount);
+
+    ++*index;
+}
+
+void BF_write_printAsm(struct BF_instruction_st *instruction, int *index) {
+    printf("\n    ;;;; Instrucion write\n");
+    printf("    mov byte [esi], %d\n", instruction->writeValue);
+
+    ++*index;
+}
+
+void BF_print_printAsm(struct BF_instruction_st *instruction, int *index) {
+    printf("\n    ;;;; Instruktsioon .\n");
+    printf("    push dword [esi]\n");
+    printf("    push fmt_char\n");
+    printf("    call printf \n");
+    printf("    add esp, 8\n");
+
+    ++*index;
+}
+
+void BF_endLoop_printAsm(struct BF_instruction_st *instruction, int *index) {
+    printf("\n    ;;;; Instruktsioon ]\n");
+    printf("    cmp byte [esi], 0\n");
+    printf("    jne silt_%d\n", instruction->loopBackIndex);
+    printf("    silt_%d:\n", *index);
+
+    ++*index;
+}
+
+void BF_beginLoop_printAsm(struct BF_instruction_st *instruction, int *index) {
+    printf("\n    ;;;; Instruktsioon [\n");
+    printf("    silt_%d:\n", *index);
+    printf("    cmp byte [esi], 0\n");
+    printf("    je silt_%d\n", instruction->loopForwardIndex);
 
     ++*index;
 }

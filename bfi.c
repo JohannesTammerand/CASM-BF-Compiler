@@ -86,33 +86,39 @@ void interpret(struct stack_st *stack, char *program)
 
 void parse(struct BF_instruction_st **inst_arr, char *program) {
     int i = 0;
-
     struct stack_st loopStack = EMPTY_STACK;
 
-    while (program[i] != 0 ) {
-        /* Algväärtustame kõik instruktsioonid eelnevalt NULL'iga. */
+    while (program[i] != 0) {
         inst_arr[i] = NULL;
-        switch (program[i]) {
-            case BF_INCREASE:
-                inst_arr[i] = BF_increment_new(1);
-                break;
 
-            case BF_DECREASE:
-                inst_arr[i] = BF_increment_new(-1);
-                break;
+        switch (program[i]) {
+
+            case BF_INCREASE:
+            case BF_DECREASE: {
+                int delta = 0;
+                while (program[i] == BF_INCREASE || program[i] == BF_DECREASE) {
+                    delta += (program[i] == BF_INCREASE) ? 1 : -1;
+                    i++;
+                }
+                inst_arr[i - 1] = BF_increment_new(delta);
+                continue;
+            }
 
             case BF_RIGHT:
-                inst_arr[i] = BF_move_new(1);
-                break;
-            
-            case BF_LEFT:
-                inst_arr[i] = BF_move_new(-1);
-                break;
+            case BF_LEFT: {
+                int move = 0;
+                while (program[i] == BF_RIGHT || program[i] == BF_LEFT) {
+                    move += (program[i] == BF_RIGHT) ? 1 : -1;
+                    i++;
+                }
+                inst_arr[i - 1] = BF_move_new(move);
+                continue;
+            }
 
             case BF_READ:
                 inst_arr[i] = BF_read_new();
                 break;
-            
+
             case BF_PRINT:
                 inst_arr[i] = BF_print_new();
                 break;
@@ -129,17 +135,11 @@ void parse(struct BF_instruction_st **inst_arr, char *program) {
             case BF_END_LOOP: {
                 int beginIndex = stack_pop(&loopStack);
                 inst_arr[i] = BF_endLoop_new(beginIndex);
-
-                /* Uuendame ka tsükli algust, et seal oleks olemas 
-                   info kus asub tsükli lõpp! */
                 inst_arr[beginIndex]->loopForwardIndex = i;
-
                 break;
-
             }
 
             default:
-                /* Ignoreerime sümboleid, mida me ei tunne. */
                 break;
         }
         i++;
@@ -157,6 +157,39 @@ void run(struct BF_instruction_st **inst_arr, int inst_arr_len) {
             i++;
         }
     }
+}
+
+void runPrintAsm(struct BF_instruction_st **inst_arr, int inst_arr_len) {
+    printf("global main\n");
+    printf("extern printf\n");
+
+    printf("section .data\n");
+    printf("    bfmem: times 30000 db 0\n");
+    printf("    fmt_char: db '%%c', 0\n");
+
+    printf("section .text\n");
+    printf("main:\n");
+
+    printf("    push esi\n");
+    printf("    lea esi, [bfmem]\n");
+
+    int i = 0;
+    while (1) {
+        if (i < 0 || i >= inst_arr_len) break;
+        if (inst_arr[i] != NULL) {
+            inst_arr[i]->printAsm(inst_arr[i], &i);
+        } else {
+            /* Suurendame indeksit iseseisvalt. */
+            i++;
+        }
+    }
+
+    printf("    pop esi\n");
+    printf("    mov eax, 1     ; sys_exit\n");
+    printf("    xor ebx, ebx   ; exit code 0\n");
+    printf("    int 0x80\n");
+    printf("    ret\n");
+    
 }
 
 void interpret2(char *program) {
@@ -188,6 +221,35 @@ void interpret2(char *program) {
     free(inst_arr);
 }
 
+void interpret3(char *program) {
+    /* Leiame programmi lähtekoodi pikkuse. */
+    int program_len = strlen(program);
+    
+    /* Teeme massiivi, mis hoiab viitasid, mida on kokku program_len tükku. Viitade
+       algväärtustamine toimub parse() funktsioonis. Massiivi pikkus on võetud varuga */
+    struct BF_instruction_st **inst_arr = malloc(sizeof(struct BF_instruction_st *) * program_len);
+
+    /* Parsime sisendprogrammi, mille tulemus salvestatakse inst_arr massiivi. */
+    parse(inst_arr, program);
+
+    /* Käivitame programmi. */
+    runPrintAsm(inst_arr, program_len);
+
+    int i = 0;
+    while (1) {
+        if (i < 0 || i >= program_len) break;
+        if (inst_arr[i] != NULL) {
+            free(inst_arr[i]);
+            i++;
+        } else {
+            /* Suurendame indeksit iseseisvalt. */
+            i++;
+        }
+    }
+
+    free(inst_arr);
+}
+
 int main(int argc, char **argv) {
     /* Kontrollime, et programmile anti täpselt üks parameeter (lisaks programmi nimele endale). */
     if (argc != 2) {
@@ -201,7 +263,7 @@ int main(int argc, char **argv) {
 
     /* Käivitame programmi, mille kasutaja andis käsurealt. */
     // interpret(&stack, argv[1]);
-    interpret2(argv[1]);
+    interpret3(argv[1]);
 
     return 0;
 }
