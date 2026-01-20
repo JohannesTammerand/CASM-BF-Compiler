@@ -8,6 +8,8 @@ struct stack_st
     int *arr;
 };
 
+#define EMPTY_STACK (struct stack_st) { 0, 0, NULL}
+
 /* Funktsioon push saab parameetriks int tüüpi väärtuse, mille lisab globaalsesse pinusse, kui
  * selles on veel ruumi. Vastasel korral trükib ekkraanile vea. Funktsioon ei tagasta midagi.
  */

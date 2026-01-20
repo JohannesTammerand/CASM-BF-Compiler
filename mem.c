@@ -50,7 +50,7 @@ int mem_right() {
     mem_move(1);
 }
 
-int mem_set(char v) {
+int mem_set(int v) {
     mem[idx].val = v;
     mem[idx].init = 1;
     return v;

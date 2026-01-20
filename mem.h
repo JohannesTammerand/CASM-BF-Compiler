@@ -4,7 +4,7 @@
 #define MEM_H
 
 struct mem_el {
-    signed char val;
+    signed int val;
     bool init;
 };
 
@@ -53,7 +53,7 @@ int mem_get();
 
 int mem_add(int amount);
 
-int mem_set(char v);
+int mem_set(int v);
 
 void mem_printDebug();
 
