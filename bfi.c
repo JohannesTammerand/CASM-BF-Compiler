@@ -5,9 +5,9 @@
 #include "instructions.h"
 
 #ifdef DEBUG
-  #define PRINT_PARAMS "'%c' (kood = %d)\n", c, c
+#define PRINT_PARAMS "'%c' (kood = %d)\n", c, c
 #else
-  #define PRINT_PARAMS "%c", c
+#define PRINT_PARAMS "%c", c
 #endif
 
 void interpret(struct stack_st *stack, char *program)
@@ -53,26 +53,34 @@ void interpret(struct stack_st *stack, char *program)
             printf(PRINT_PARAMS);
             break;
         }
-        case BF_START_LOOP: {
-            if (mem_get() == 0) {
+        case BF_START_LOOP:
+        {
+            if (mem_get() == 0)
+            {
                 int count = 1;
                 i++;
-                while (count != 0 && program[i] != 0) {
-                    if (program[i] == BF_START_LOOP) {
+                while (count != 0 && program[i] != 0)
+                {
+                    if (program[i] == BF_START_LOOP)
+                    {
                         count++;
                     }
-                    if (program[i] == BF_END_LOOP) {
+                    if (program[i] == BF_END_LOOP)
+                    {
                         count--;
                     }
                     i++;
                 };
                 i--;
-            } else {
+            }
+            else
+            {
                 stack_push(stack, i);
             }
             break;
         }
-        case BF_END_LOOP: {
+        case BF_END_LOOP:
+        {
             i = stack_pop(stack) - 1;
             break;
         }
@@ -84,82 +92,219 @@ void interpret(struct stack_st *stack, char *program)
     }
 }
 
-void parse(struct BF_instruction_st **inst_arr, char *program) {
-    int i = 0;
-    struct stack_st loopStack = EMPTY_STACK;
+/* Prindib välja terve käskude pinu */
+void print_instruction_stack(struct BF_instruction_st **inst_arr, int inst_arr_len)
+{
+    printf("Instruction Stack (length = %d):\n", inst_arr_len);
 
-    while (program[i] != 0) {
-        inst_arr[i] = NULL;
-
-        switch (program[i]) {
-
-            case BF_INCREASE:
-            case BF_DECREASE: {
-                int delta = 0;
-                while (program[i] == BF_INCREASE || program[i] == BF_DECREASE) {
-                    delta += (program[i] == BF_INCREASE) ? 1 : -1;
-                    i++;
-                }
-                inst_arr[i - 1] = BF_increment_new(delta);
-                continue;
-            }
-
-            case BF_RIGHT:
-            case BF_LEFT: {
-                int move = 0;
-                while (program[i] == BF_RIGHT || program[i] == BF_LEFT) {
-                    move += (program[i] == BF_RIGHT) ? 1 : -1;
-                    i++;
-                }
-                inst_arr[i - 1] = BF_move_new(move);
-                continue;
-            }
-
-            case BF_READ:
-                inst_arr[i] = BF_read_new();
-                break;
-
-            case BF_PRINT:
-                inst_arr[i] = BF_print_new();
-                break;
-
-            case BF_DEBUG:
-                inst_arr[i] = BF_printDebug_new();
-                break;
-
-            case BF_START_LOOP:
-                inst_arr[i] = BF_beginLoop_new();
-                stack_push(&loopStack, i);
-                break;
-
-            case BF_END_LOOP: {
-                int beginIndex = stack_pop(&loopStack);
-                inst_arr[i] = BF_endLoop_new(beginIndex);
-                inst_arr[beginIndex]->loopForwardIndex = i;
-                break;
-            }
-
-            default:
-                break;
+    for (int i = 0; i < inst_arr_len; ++i)
+    {
+        struct BF_instruction_st *inst = inst_arr[i];
+        if (!inst)
+        {
+            printf("[%03d] NULL\n", i);
+            continue;
         }
-        i++;
+
+        printf("[%03d] ", i);
+
+        if (inst->run == BF_increment_run)
+        {
+            printf("INCREMENT delta=%d\n", inst->increment);
+        }
+        else if (inst->run == BF_move_run)
+        {
+            printf("MOVE positions=%d\n", inst->numberOfPositions);
+        }
+        else if (inst->run == BF_read_run)
+        {
+            printf("READ\n");
+        }
+        else if (inst->run == BF_write_run)
+        {
+            printf("WRITE value=%d\n", inst->writeValue);
+        }
+        else if (inst->run == BF_print_run)
+        {
+            printf("PRINT\n");
+        }
+        else if (inst->run == BF_printDebug_run)
+        {
+            printf("DEBUG\n");
+        }
+        else if (inst->run == BF_beginLoop_run)
+        {
+            printf("LOOP_START -> jump to %d if zero\n", inst->loopForwardIndex);
+        }
+        else if (inst->run == BF_endLoop_run)
+        {
+            printf("LOOP_END -> jump back to %d if nonzero\n", inst->loopBackIndex);
+        }
+        else
+        {
+            printf("UNKNOWN RUN FUNCTION\n");
+        }
     }
 }
 
-void run(struct BF_instruction_st **inst_arr, int inst_arr_len) {
+void parse(struct BF_instruction_st **inst_arr, char *program)
+{
     int i = 0;
-    while (1) {
-        if (i < 0 || i >= inst_arr_len) break;
-        if (inst_arr[i] != NULL) {
+    int inst_idx = 0;
+    struct stack_st loopStack = EMPTY_STACK;
+
+    while (program[i] != 0)
+    {
+        inst_arr[inst_idx] = NULL;
+
+        switch (program[i])
+        {
+
+        case BF_INCREASE:
+        case BF_DECREASE:
+        {
+            int delta = 0;
+            while (program[i] == BF_INCREASE || program[i] == BF_DECREASE)
+            {
+                delta += (program[i] == BF_INCREASE) ? 1 : -1;
+                i++;
+            }
+            inst_arr[inst_idx] = BF_increment_new(delta);
+            inst_idx++;
+            continue;
+        }
+
+        case BF_RIGHT:
+        case BF_LEFT:
+        {
+            int move = 0;
+            while (program[i] == BF_RIGHT || program[i] == BF_LEFT)
+            {
+                move += (program[i] == BF_RIGHT) ? 1 : -1;
+                i++;
+            }
+            inst_arr[inst_idx] = BF_move_new(move);
+
+            inst_idx++;
+            continue;
+        }
+
+        case BF_READ:
+            inst_arr[inst_idx] = BF_read_new();
+
+            inst_idx++;
+            break;
+
+        case BF_PRINT:
+            inst_arr[inst_idx] = BF_print_new();
+
+            inst_idx++;
+            break;
+
+        case BF_DEBUG:
+            inst_arr[inst_idx] = BF_printDebug_new();
+
+            inst_idx++;
+            break;
+
+        case BF_START_LOOP:
+            inst_arr[inst_idx] = BF_beginLoop_new();
+            stack_push(&loopStack, inst_idx);
+
+            inst_idx++;
+            break;
+
+        case BF_END_LOOP:
+        {
+            if (loopStack.len == 0)
+            {
+                fprintf(stderr, "Syntax error: unmatched ']'\n");
+                exit(1);
+            }
+            int beginIndex = stack_pop(&loopStack);
+            inst_arr[inst_idx] = BF_endLoop_new(beginIndex);
+            inst_arr[beginIndex]->loopForwardIndex = inst_idx;
+
+            inst_idx++;
+            break;
+        }
+
+        default:
+            // ignore unknown characters
+            i++;
+            continue;
+        }
+
+        i++;
+    }
+
+    if (loopStack.len != 0)
+    {
+        fprintf(stderr, "Syntax error: unmatched '['\n");
+        exit(1);
+    }
+}
+
+void run(struct BF_instruction_st **inst_arr, int inst_arr_len)
+{
+    int i = 0;
+    while (1)
+    {
+        if (i < 0 || i >= inst_arr_len)
+            break;
+        if (inst_arr[i] != NULL)
+        {
             inst_arr[i]->run(inst_arr[i], &i);
-        } else {
+        }
+        else
+        {
             /* Suurendame indeksit iseseisvalt. */
             i++;
         }
     }
 }
 
-void runPrintAsm(struct BF_instruction_st **inst_arr, int inst_arr_len) {
+void interpret2(char *program)
+{
+    /* Leiame programmi lähtekoodi pikkuse. */
+    int program_len = strlen(program);
+
+    /* Teeme massiivi, mis hoiab viitasid, mida on kokku program_len tükku. Viitade
+       algväärtustamine toimub parse() funktsioonis. Massiivi pikkus on võetud varuga */
+    struct BF_instruction_st **inst_arr = malloc(sizeof(struct BF_instruction_st *) * program_len);
+
+    /* Parsime sisendprogrammi, mille tulemus salvestatakse inst_arr massiivi. */
+    parse(inst_arr, program);
+
+#ifdef DEBUG
+    print_instruction_stack(inst_arr, strlen(program));
+#endif
+
+    /* Käivitame programmi. */
+    run(inst_arr, program_len);
+
+    int i = 0;
+    while (1)
+    {
+        if (i < 0 || i >= program_len)
+            break;
+        if (inst_arr[i] != NULL)
+        {
+            free(inst_arr[i]);
+            i++;
+        }
+        else
+        {
+            /* Suurendame indeksit iseseisvalt. */
+            i++;
+        }
+    }
+
+    free(inst_arr);
+}
+
+void runPrintAsm(struct BF_instruction_st **inst_arr, int inst_arr_len)
+{
     printf("global main\n");
     printf("extern printf\n");
 
@@ -174,11 +319,16 @@ void runPrintAsm(struct BF_instruction_st **inst_arr, int inst_arr_len) {
     printf("    lea esi, [bfmem]\n");
 
     int i = 0;
-    while (1) {
-        if (i < 0 || i >= inst_arr_len) break;
-        if (inst_arr[i] != NULL) {
+    while (1)
+    {
+        if (i < 0 || i >= inst_arr_len)
+            break;
+        if (inst_arr[i] != NULL)
+        {
             inst_arr[i]->printAsm(inst_arr[i], &i);
-        } else {
+        }
+        else
+        {
             /* Suurendame indeksit iseseisvalt. */
             i++;
         }
@@ -189,42 +339,13 @@ void runPrintAsm(struct BF_instruction_st **inst_arr, int inst_arr_len) {
     printf("    xor ebx, ebx   ; exit code 0\n");
     printf("    int 0x80\n");
     printf("    ret\n");
-    
 }
 
-void interpret2(char *program) {
+void interpret3(char *program)
+{
     /* Leiame programmi lähtekoodi pikkuse. */
     int program_len = strlen(program);
-    
-    /* Teeme massiivi, mis hoiab viitasid, mida on kokku program_len tükku. Viitade
-       algväärtustamine toimub parse() funktsioonis. Massiivi pikkus on võetud varuga */
-    struct BF_instruction_st **inst_arr = malloc(sizeof(struct BF_instruction_st *) * program_len);
 
-    /* Parsime sisendprogrammi, mille tulemus salvestatakse inst_arr massiivi. */
-    parse(inst_arr, program);
-
-    /* Käivitame programmi. */
-    run(inst_arr, program_len);
-
-    int i = 0;
-    while (1) {
-        if (i < 0 || i >= program_len) break;
-        if (inst_arr[i] != NULL) {
-            free(inst_arr[i]);
-            i++;
-        } else {
-            /* Suurendame indeksit iseseisvalt. */
-            i++;
-        }
-    }
-
-    free(inst_arr);
-}
-
-void interpret3(char *program) {
-    /* Leiame programmi lähtekoodi pikkuse. */
-    int program_len = strlen(program);
-    
     /* Teeme massiivi, mis hoiab viitasid, mida on kokku program_len tükku. Viitade
        algväärtustamine toimub parse() funktsioonis. Massiivi pikkus on võetud varuga */
     struct BF_instruction_st **inst_arr = malloc(sizeof(struct BF_instruction_st *) * program_len);
@@ -236,12 +357,17 @@ void interpret3(char *program) {
     runPrintAsm(inst_arr, program_len);
 
     int i = 0;
-    while (1) {
-        if (i < 0 || i >= program_len) break;
-        if (inst_arr[i] != NULL) {
+    while (1)
+    {
+        if (i < 0 || i >= program_len)
+            break;
+        if (inst_arr[i] != NULL)
+        {
             free(inst_arr[i]);
             i++;
-        } else {
+        }
+        else
+        {
             /* Suurendame indeksit iseseisvalt. */
             i++;
         }
@@ -250,20 +376,25 @@ void interpret3(char *program) {
     free(inst_arr);
 }
 
-int main(int argc, char **argv) {
-    /* Kontrollime, et programmile anti täpselt üks parameeter (lisaks programmi nimele endale). */
-    if (argc != 2) {
-        printf("Programmil peab olema üks parameeter, milleks on BF programm!\n");
-
-        /* Tagastame veakoodi. */
-        return 1;
-    }
-
-    struct stack_st stack = { .len = 0, .size = 0, .arr = NULL};
+int main(int argc, char **argv)
+{
+    struct stack_st stack = {.len = 0, .size = 0, .arr = NULL};
 
     /* Käivitame programmi, mille kasutaja andis käsurealt. */
-    // interpret(&stack, argv[1]);
-    interpret3(argv[1]);
+
+    if (argc > 2 && strcmp(argv[1], "--asm") == 0)
+    {
+        interpret3(argv[2]);
+    }
+    else
+    {
+        printf("1. programm - stack.c + mem.c\n");
+        interpret(&stack, argv[1]);
+        mem_init();
+        printf("\n2. programm - mem.c + instructions.c\n");
+        interpret2(argv[1]);
+        printf("\n");
+    }
 
     return 0;
 }

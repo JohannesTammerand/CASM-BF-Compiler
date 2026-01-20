@@ -167,31 +167,28 @@ void BF_move_run(struct BF_instruction_st *instruction, int *index) {
 }
 
 void BF_read_run(struct BF_instruction_st *instruction, int *index) {
-    /* Loeme märgi standardsisendist (kasutaja sisestab konsooli). */
     int c = getc(stdin);
-    if (EOF == c)
-    {
-        /* Sisendi lõpu korral lõpetame interpretaatori töö. */
-        printf("Sisendi lõpp!\n");
+    if (c == EOF) {
+        printf("End of input!\n");
+
+        ++*index;
         return;
     }
-
-    /* Lisame mällu loetud väärtuse. */
     mem_set(c);
+
+    ++*index;
 }
 
 void BF_write_run(struct BF_instruction_st *instruction, int *index) {
     mem_set(instruction->writeValue);
-
     ++*index;
 }
 
 void BF_beginLoop_run(struct BF_instruction_st *instruction, int *index) {
     int val = mem_get();
-
     if (instruction->loopForwardIndex < 0) {
-        printf("Tsükli algus algväärtustamata!\n");
-        return;
+        fprintf(stderr, "Error: loop start index not set!\n");
+        exit(1);
     }
 
     if (val == 0) {
@@ -203,16 +200,14 @@ void BF_beginLoop_run(struct BF_instruction_st *instruction, int *index) {
 
 void BF_endLoop_run(struct BF_instruction_st *instruction, int *index) {
     int val = mem_get();
-
     if (instruction->loopBackIndex < 0) {
-        printf("Tsükli lõpp algväärtustamata!\n");
-        return;
+        exit(1);
     }
 
-    if (val == 0) {
-        ++*index;
-    } else {
+    if (val != 0) {
         *index = instruction->loopBackIndex;
+    } else {
+        ++*index;
     }
 }
 
@@ -228,6 +223,7 @@ void BF_printDebug_run(struct BF_instruction_st *instruction, int *index) {
 
     ++*index;
 }
+
 
 void BF_increment_printAsm(struct BF_instruction_st *instruction, int *index) {
     printf("\n    ;;;; Instruktsioon add\n");
@@ -266,7 +262,8 @@ void BF_write_printAsm(struct BF_instruction_st *instruction, int *index) {
 
 void BF_print_printAsm(struct BF_instruction_st *instruction, int *index) {
     printf("\n    ;;;; Instruktsioon .\n");
-    printf("    push dword [esi]\n");
+    printf("    movzx eax, byte [esi]\n");
+    printf("    push eax\n");
     printf("    push fmt_char\n");
     printf("    call printf \n");
     printf("    add esp, 8\n");

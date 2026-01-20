@@ -3,8 +3,10 @@
 #ifndef MEM_H
 #define MEM_H
 
+#define MEM_SIZE 30000
+
 struct mem_el {
-    signed int val;
+    char val;
     bool init;
 };
 
@@ -49,7 +51,7 @@ int mem_right();
 
 int mem_move(int numberOfPositions);
 
-int mem_get();
+unsigned char mem_get();
 
 int mem_add(int amount);
 

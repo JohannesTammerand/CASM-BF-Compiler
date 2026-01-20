@@ -1,6 +1,10 @@
 CC=gcc
-CFLAGS=-DDEBUG
-all: bfi
+CFLAGS=
+MAKE = make
+PROGRAM = ++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.
+
+.SILENT:
+all: bfi asm
 
 stack.o: stack.c
 	$(CC) $(CFLAGS) -c stack.c
@@ -15,10 +19,15 @@ bfi: stack.h stack.o mem.h mem.o instructions.h instructions.o
 	$(CC) $(CFLAGS) bfi.c mem.o stack.o instructions.o -o bfi
 
 asm: bfi
-	./bfi '++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.' > bfiAsm.asm
+	./bfi --asm '$(PROGRAM)' > bfiAsm.asm
 	nasm bfiAsm.asm -felf
 	gcc -m32 -no-pie bfiAsm.o -o bfiAsm
+
+.SILENT:
+run: all
+	./bfi '$(PROGRAM)'
+	echo 3. programm - instructions.c + asm
 	./bfiAsm
 
 clean:
-	rm -fr bfi stack.o mem.o bfiAsm bfi.asm bfiAsm.o bfi.o bfiAsm.asm
+	rm -fr bfi stack.o mem.o instructions.o bfiAsm bfi.asm bfiAsm.o bfi.o bfiAsm.asm
